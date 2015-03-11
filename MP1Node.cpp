@@ -251,12 +251,39 @@ while (getline(ss, s, ' ')) {
             stringstream ss(data);
             string st;
             getline(ss, st, '#');
-            cout << st << endl;
-            
-            //vector<MemberListEntry> *memberList = reinterpret_cast<vector<MemberListEntry>*>(data + sizeof(MessageHdr));
-            //for (std::vector<MemberListEntry>::iterator it = memberList->begin() ; it != memberList->end(); ++it) {
-            //    cout << it->id << ":" << it->port << "\n";
-            //}
+            size_t size;
+            int msgType = stoi(st, &size);
+            switch (msgType) {
+                case JOINREP: {
+#ifdef DEBUGLOG
+	                log->LOG(&memberNode->addr, "JOINREP Received");
+#endif
+                    // parse membershiplist
+                    getline(ss, st, '#');
+                    int mlsize = stoi(st, &size);
+                    for (int i = 0; i < mlsize; ++i) {
+                        // id
+                        getline(ss, st, '#');
+                        int id = stoi(st, &size);
+                        // port
+                        getline(ss, st, '#');
+                        short port = (short)stoi(st, &size);
+                        // Heartbeat
+                        getline(ss, st, '#');
+                        long heartbeat = stol(st, &size);
+                        // Timestamp
+                        getline(ss, st, '#');
+                        long timestamp = stol(st, &size);
+
+                        MemberListEntry *m = new MemberListEntry(id, port, heartbeat, par->getcurrtime());
+                        memberNode->memberList.push_back(*m);
+                        
+                        string str_addr = to_string(id) + ":" + to_string(port);
+                        Address *node_addr = new Address(str_addr);
+                        log->logNodeAdd(&memberNode->addr, node_addr);
+                    }
+                }
+            };
             break;
         }
 	};
@@ -285,9 +312,10 @@ void MP1Node::sendJoinReply(MemberListEntry *node) {
 
     // Serialize memberList
     std::vector<MemberListEntry> *memberList = &memberNode->memberList;
+    ss << "#" << memberList->size();
     for (std::vector<MemberListEntry>::iterator it = memberList->begin() ; 
         it != memberList->end(); ++it) {
-        ss << "#" << it->getid() << ":" << it->getport() << "#" << 
+        ss << "#" << it->getid() << "#" << it->getport() << "#" << 
             it->getheartbeat() << "#" << it->gettimestamp();
     }
     
