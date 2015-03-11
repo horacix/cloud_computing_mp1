@@ -129,6 +129,8 @@ int MP1Node::introduceSelfToGroup(Address *joinaddr) {
         log->LOG(&memberNode->addr, "Starting up group...");
 #endif
         memberNode->inGroup = true;
+        MemberListEntry *m = new MemberListEntry(1, 0, 0, 0);
+        memberNode->memberList.push_back(*m);
     }
     else {
         size_t msgsize = sizeof(MessageHdr) + sizeof(joinaddr->addr) + sizeof(long) + 1;
@@ -136,8 +138,8 @@ int MP1Node::introduceSelfToGroup(Address *joinaddr) {
 
         // create JOINREQ message: format of data is {struct Address myaddr}
         msg->msgType = JOINREQ;
-        memcpy((char *)(msg+1), &memberNode->addr.addr, sizeof(memberNode->addr.addr));
-        memcpy((char *)(msg+1) + 1 + sizeof(memberNode->addr.addr), &memberNode->heartbeat, sizeof(long));
+        memcpy((char *)(msg + 1), &memberNode->addr.addr, sizeof(memberNode->addr.addr));
+        memcpy((char *)(msg + 1) + 1 + sizeof(memberNode->addr.addr), &memberNode->heartbeat, sizeof(long));
 
 #ifdef DEBUGLOG
         sprintf(s, "Trying to join...");
@@ -215,9 +217,82 @@ void MP1Node::checkMessages() {
  * DESCRIPTION: Message handler for different message types
  */
 bool MP1Node::recvCallBack(void *env, char *data, int size ) {
-	/*
-	 * Your code goes here
-	 */
+    static char s[1024];
+    MessageHdr *msg = reinterpret_cast<MessageHdr*>(data);
+	
+	switch (msg->msgType) {
+	    case JOINREQ: {
+            Address *addr = reinterpret_cast<Address*>(data + sizeof(MessageHdr));
+            long heartbeat = *(data + (size - sizeof(long)) );
+
+#ifdef DEBUGLOG
+            sprintf(s, "JOINREQ Received from %s", addr->getAddress().c_str());
+	        log->LOG(&memberNode->addr, s);
+#endif
+            recvJoinRequest(addr, heartbeat);
+            break;
+	    }
+        default: {
+
+#ifdef DEBUGLOG
+            sprintf(s, "Received %s!", data);
+	        log->LOG(&memberNode->addr, s);
+#endif
+            memberNode->inGroup = true;
+            // deserialize and copy membership list
+/*
+stringstream ss("bla bla");
+string s;
+
+while (getline(ss, s, ' ')) {
+ cout << s << endl;
+}
+*/
+            stringstream ss(data);
+            string st;
+            getline(ss, st, '#');
+            cout << st << endl;
+            
+            //vector<MemberListEntry> *memberList = reinterpret_cast<vector<MemberListEntry>*>(data + sizeof(MessageHdr));
+            //for (std::vector<MemberListEntry>::iterator it = memberList->begin() ; it != memberList->end(); ++it) {
+            //    cout << it->id << ":" << it->port << "\n";
+            //}
+            break;
+        }
+	};
+}
+
+
+void MP1Node::recvJoinRequest(Address *node, long heartbeat) {
+    string node_addr = node->getAddress();
+    size_t pos = node_addr.find(":");
+	int id = stoi(node_addr.substr(0, pos));
+	short port = (short)stoi(node_addr.substr(pos + 1, node_addr.size()-pos-1));
+	
+    MemberListEntry *m = new MemberListEntry(id, port, heartbeat, par->getcurrtime());
+    memberNode->memberList.push_back(*m);
+    log->logNodeAdd(&memberNode->addr, node);
+    
+    sendJoinReply(m);
+}
+
+void MP1Node::sendJoinReply(MemberListEntry *node) {
+
+    std::stringstream ss;
+    MessageHdr msg;
+    msg.msgType = JOINREP;
+    ss << msg.msgType;
+
+    // Serialize memberList
+    std::vector<MemberListEntry> *memberList = &memberNode->memberList;
+    for (std::vector<MemberListEntry>::iterator it = memberList->begin() ; 
+        it != memberList->end(); ++it) {
+        ss << "#" << it->getid() << ":" << it->getport() << "#" << 
+            it->getheartbeat() << "#" << it->gettimestamp();
+    }
+    
+    Address *a = new Address(to_string(node->getid()) + ":" + to_string(node->getport()));
+    emulNet->ENsend(&memberNode->addr, a, ss.str());
 }
 
 /**
@@ -229,9 +304,8 @@ bool MP1Node::recvCallBack(void *env, char *data, int size ) {
  */
 void MP1Node::nodeLoopOps() {
 
-	/*
-	 * Your code goes here
-	 */
+	memberNode->heartbeat += 1;
+	
 
     return;
 }

@@ -8,6 +8,7 @@
 #ifndef _MP1NODE_H_
 #define _MP1NODE_H_
 
+#include <sstream>
 #include "stdincludes.h"
 #include "Log.h"
 #include "Params.h"
@@ -31,6 +32,7 @@
 enum MsgTypes{
     JOINREQ,
     JOINREP,
+    HEARTBEAT,
     DUMMYLASTMSGTYPE
 };
 
@@ -70,6 +72,15 @@ public:
 	void nodeLoop();
 	void checkMessages();
 	bool recvCallBack(void *env, char *data, int size);
+	
+	// Messages
+	void sendHeartbeat(MemberListEntry *node);
+	void sendJoinReply(MemberListEntry *node);
+
+	// Message handlers
+	void recvJoinRequest(Address *node, long heartbeat);
+	void recvHeartbeat(Address *node);
+	
 	void nodeLoopOps();
 	int isNullAddress(Address *addr);
 	Address getJoinAddress();
