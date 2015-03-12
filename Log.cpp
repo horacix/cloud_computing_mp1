@@ -114,7 +114,7 @@ void Log::LOG(Address *addr, const char * str, ...) {
  * DESCRIPTION: To Log a node add
  */
 void Log::logNodeAdd(Address *thisNode, Address *addedAddr) {
-	static char stdstring[30];
+	static char stdstring[60];
 	sprintf(stdstring, "Node %d.%d.%d.%d:%d joined at time %d", addedAddr->addr[0], addedAddr->addr[1], addedAddr->addr[2], addedAddr->addr[3], *(short *)&addedAddr->addr[4], par->getcurrtime());
     LOG(thisNode, stdstring);
 }
@@ -125,7 +125,7 @@ void Log::logNodeAdd(Address *thisNode, Address *addedAddr) {
  * DESCRIPTION: To log a node remove
  */
 void Log::logNodeRemove(Address *thisNode, Address *removedAddr) {
-	static char stdstring[30];
+	static char stdstring[60];
 	sprintf(stdstring, "Node %d.%d.%d.%d:%d removed at time %d", removedAddr->addr[0], removedAddr->addr[1], removedAddr->addr[2], removedAddr->addr[3], *(short *)&removedAddr->addr[4], par->getcurrtime());
     LOG(thisNode, stdstring);
 }

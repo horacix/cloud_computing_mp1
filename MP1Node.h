@@ -21,6 +21,7 @@
  */
 #define TREMOVE 20
 #define TFAIL 5
+#define GOSSIP_CNT 4
 
 /*
  * Note: You can change/add any functions in MP1Node.{h,cpp}
@@ -32,7 +33,7 @@
 enum MsgTypes{
     JOINREQ,
     JOINREP,
-    HEARTBEAT,
+    GOSSIP,
     DUMMYLASTMSGTYPE
 };
 
@@ -57,6 +58,10 @@ private:
 	Params *par;
 	Member *memberNode;
 	char NULLADDR[6];
+	
+	void addNodeToMemberList(int, short, long);
+	int getAddressId(Address* node);
+	short getAddressPort(Address* node);
 
 public:
 	MP1Node(Member *, Params *, EmulNet *, Log *, Address *);
@@ -74,8 +79,8 @@ public:
 	bool recvCallBack(void *env, char *data, int size);
 	
 	// Messages
-	void sendHeartbeat(MemberListEntry *node);
-	void sendJoinReply(MemberListEntry *node);
+	void sendGossip();
+	void sendJoinReply(Address *node);
 
 	// Message handlers
 	void recvJoinRequest(Address *node, long heartbeat);
