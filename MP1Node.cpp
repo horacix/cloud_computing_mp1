@@ -222,7 +222,6 @@ bool MP1Node::recvCallBack(void *env, char *data, int size ) {
 	switch (msg->msgType) {
 	    case JOINREQ: {
             Address *addr = reinterpret_cast<Address*>(data + sizeof(MessageHdr));
-            //Address* addr = new Address(*maddr);
             long heartbeat = *(data + (size - sizeof(long)) );
 
 #ifdef DEBUGLOG
@@ -233,13 +232,13 @@ bool MP1Node::recvCallBack(void *env, char *data, int size ) {
             break;
 	    }
         default: {
-
+            string sdata (data, (size_t)size);
 #ifdef DEBUGLOG
-            sprintf(s, "Received %s!", data);
+            sprintf(s, "Received %s!", sdata.c_str());
 	        log->LOG(&memberNode->addr, s);
 #endif
             // deserialize and copy membership list
-            stringstream ss(data);
+            stringstream ss(sdata);
             string st;
             getline(ss, st, '#');
             size_t size;
@@ -388,14 +387,14 @@ void MP1Node::sendGossip() {
         if (mle.getid() == 0)
             continue;
         string str_addr = to_string(mle.getid()) + ":" + to_string(mle.getport());
-        Address* node_addr = new Address(str_addr);
+        Address node_addr (str_addr);
 
 #ifdef DEBUGLOG
         static char s[1024];
-        sprintf(s, "Sending GOSSIP [%s] to %s", ss.str().c_str(), node_addr->getAddress().c_str());
+        sprintf(s, "Sending GOSSIP [%s] to %s", ss.str().c_str(), node_addr.getAddress().c_str());
 	    log->LOG(&memberNode->addr, s);
 #endif
-        emulNet->ENsend(&memberNode->addr, node_addr, ss.str());
+        emulNet->ENsend(&memberNode->addr, &node_addr, ss.str());
     }
 }
 
