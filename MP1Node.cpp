@@ -419,7 +419,9 @@ void MP1Node::nodeLoopOps() {
 	failed = 0;
     for (std::vector<MemberListEntry>::iterator it = memberList->begin() ; 
         it != memberList->end(); ++it) {
-        if (it->getid() > 0 && it->gettimestamp() < par->getcurrtime() - TFAIL - TREMOVE) {
+        if (it->getid() == 0)
+            continue;
+        if (it->gettimestamp() < par->getcurrtime() - TFAIL - TREMOVE) {
             
             string str_addr = to_string(it->getid()) + ":" + to_string(it->getport());
             Address node_addr (str_addr);
