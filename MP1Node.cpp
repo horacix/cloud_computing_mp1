@@ -221,8 +221,8 @@ bool MP1Node::recvCallBack(void *env, char *data, int size ) {
 	
 	switch (msg->msgType) {
 	    case JOINREQ: {
-            Address *maddr = reinterpret_cast<Address*>(data + sizeof(MessageHdr));
-            Address* addr = new Address(*maddr);
+            Address *addr = reinterpret_cast<Address*>(data + sizeof(MessageHdr));
+            //Address* addr = new Address(*maddr);
             long heartbeat = *(data + (size - sizeof(long)) );
 
 #ifdef DEBUGLOG
@@ -250,8 +250,15 @@ bool MP1Node::recvCallBack(void *env, char *data, int size ) {
 	                log->LOG(&memberNode->addr, "JOINREP Received");
 #endif
                     memberNode->inGroup = true;
+                }
+                case GOSSIP: {
+#ifdef DEBUGLOG
+	                log->LOG(&memberNode->addr, "GOSSIP Received");
+#endif
+                }
+                default: {
                     // parse membershiplist
-                    getline(ss, st, '#');
+                    getline(ss, st, '|');
                     int mlsize = stoi(st, &size);
                     for (int i = 0; i < mlsize; ++i) {
                         // id
@@ -264,7 +271,7 @@ bool MP1Node::recvCallBack(void *env, char *data, int size ) {
                         getline(ss, st, '#');
                         long heartbeat = stol(st, &size);
                         // Timestamp
-                        getline(ss, st, '#');
+                        getline(ss, st, '|');
                         long timestamp = stol(st, &size);
 
                         addNodeToMemberList(id, port, heartbeat);
@@ -332,16 +339,20 @@ void MP1Node::sendJoinReply(Address *node) {
     // Serialize memberList
     std::vector<MemberListEntry> *memberList = &memberNode->memberList;
     ss << "#" << memberList->size();
-    for (std::vector<MemberListEntry>::iterator it = memberList->begin() ; 
-        it != memberList->end(); ++it) {
-            if (it->getid() == 0 || it->gettimestamp() < par->getcurrtime() - TFAIL) {
-                // Dont send failed or removed nodes
-                continue;
-            }
-        ss << "#" << it->getid() << "#" << it->getport() << "#" << 
+    for (std::vector<MemberListEntry>::iterator it = memberList->begin(); it != memberList->end(); ++it) {
+        if (it->getid() == 0 || it->gettimestamp() < par->getcurrtime() - TFAIL) {
+            // Dont send failed or removed nodes
+            continue;
+        }
+        ss << "|" << it->getid() << "#" << it->getport() << "#" << 
             it->getheartbeat() << "#" << it->gettimestamp();
     }
-    
+
+#ifdef DEBUGLOG
+        static char s[1024];
+        sprintf(s, "Sending JOINREP [%s] to %s", ss.str().c_str(), node->getAddress().c_str());
+	    log->LOG(&memberNode->addr, s);
+#endif    
     emulNet->ENsend(&memberNode->addr, node, ss.str());
 }
 
@@ -366,7 +377,7 @@ void MP1Node::sendGossip() {
                 // Dont send failed or removed nodes
                 continue;
             }
-        ss << "#" << it->getid() << "#" << it->getport() << "#" << 
+        ss << "|" << it->getid() << "#" << it->getport() << "#" << 
             it->getheartbeat() << "#" << it->gettimestamp();
     }
     
@@ -381,7 +392,7 @@ void MP1Node::sendGossip() {
 
 #ifdef DEBUGLOG
         static char s[1024];
-        sprintf(s, "Sending GOSSIP to %s", node_addr->getAddress().c_str());
+        sprintf(s, "Sending GOSSIP [%s] to %s", ss.str().c_str(), node_addr->getAddress().c_str());
 	    log->LOG(&memberNode->addr, s);
 #endif
         emulNet->ENsend(&memberNode->addr, node_addr, ss.str());
