@@ -400,7 +400,7 @@ void MP1Node::nodeLoopOps() {
 	memberNode->heartbeat += 1;
 	
 	
-	memberNode->memberList[getAddressId(&memberNode->addr)].setheartbeat(memberNode->heartbeat);
+	memberNode->memberList.at(getAddressId(&memberNode->addr) - 1).setheartbeat(memberNode->heartbeat);
 	
 	// Busco nodos de mi member list expirados (TREMOVE+TFAIL)
 	// Y los elimino de la lista
