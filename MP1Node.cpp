@@ -417,7 +417,7 @@ void MP1Node::nodeLoopOps() {
         }
     }
     
-    //sendGossip();
+    sendGossip();
     return;
 }
 
