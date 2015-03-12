@@ -300,6 +300,7 @@ void MP1Node::addNodeToMemberList(int id, short port, long heartbeat) {
         MemberListEntry m (id, port, heartbeat, par->getcurrtime());
 
         memberNode->memberList.at(id-1) = m;
+        ++neighbors;
         
         string str_addr = to_string(id) + ":" + to_string(port);
         Address node_addr (str_addr);
@@ -337,7 +338,7 @@ void MP1Node::sendJoinReply(Address *node) {
 
     // Serialize memberList
     std::vector<MemberListEntry> *memberList = &memberNode->memberList;
-    ss << "#" << memberList->size();
+    ss << "#" << neighbors - failed;
     for (std::vector<MemberListEntry>::iterator it = memberList->begin(); it != memberList->end(); ++it) {
         if (it->getid() == 0 || it->gettimestamp() < par->getcurrtime() - TFAIL) {
             // Dont send failed or removed nodes
@@ -369,7 +370,7 @@ void MP1Node::sendGossip() {
     ss << msg.msgType;
 
     // Serialize memberList
-    ss << "#" << memberList->size();
+    ss << "#" << neighbors - failed;
     for (std::vector<MemberListEntry>::iterator it = memberList->begin() ; 
         it != memberList->end(); ++it) {
             if (it->getid() == 0 || it->gettimestamp() < par->getcurrtime() - TFAIL) {
@@ -384,7 +385,7 @@ void MP1Node::sendGossip() {
         // choose random receipient
         int v1 = rand() % memberList->size();
         MemberListEntry mle = memberList->at(v1);
-        if (mle.getid() == 0)
+        if (mle.getid() == 0 || mle.gettimestamp() < par->getcurrtime() - TFAIL)
             continue;
         string str_addr = to_string(mle.getid()) + ":" + to_string(mle.getport());
         Address node_addr (str_addr);
@@ -409,12 +410,13 @@ void MP1Node::nodeLoopOps() {
 
 	memberNode->heartbeat += 1;
 	
-	
 	memberNode->memberList.at(getAddressId(&memberNode->addr) - 1).setheartbeat(memberNode->heartbeat);
-	
+	memberNode->memberList.at(getAddressId(&memberNode->addr) - 1).settimestamp(par->getcurrtime());
+
 	// Busco nodos de mi member list expirados (TREMOVE+TFAIL)
 	// Y los elimino de la lista
 	std::vector<MemberListEntry> *memberList = &memberNode->memberList;
+	failed = 0;
     for (std::vector<MemberListEntry>::iterator it = memberList->begin() ; 
         it != memberList->end(); ++it) {
         if (it->getid() > 0 && it->gettimestamp() < par->getcurrtime() - TFAIL - TREMOVE) {
@@ -424,6 +426,9 @@ void MP1Node::nodeLoopOps() {
             log->logNodeRemove(&memberNode->addr, &node_addr);
             
             it->setid(0);
+            --neighbors;
+        } else if (it->gettimestamp() < par->getcurrtime() - TFAIL) {
+            ++failed;
         }
     }
     

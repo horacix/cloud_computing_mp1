@@ -58,6 +58,8 @@ private:
 	Params *par;
 	Member *memberNode;
 	char NULLADDR[6];
+	unsigned int neighbors = 0;
+	unsigned int failed = 0;
 	
 	void addNodeToMemberList(int, short, long);
 	int getAddressId(Address* node);
